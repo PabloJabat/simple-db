@@ -15,14 +15,18 @@ class Table(Generic[V]):
     def __init__(self, name: str, serializer) -> None:
         self._name = name
         self._serializer = serializer
+        self._table_path = None
 
-    def init(self) -> None:
+    def init(self, override=False) -> None:
         """
         Initialise the table.
 
         :return:
         """
-        if os.path.isfile(self._table_location):
+
+        self._table_path = os.environ["SIMPLE_DB_PATH"]
+
+        if os.path.isfile(self._table_location) and not override:
             raise DbExistsError(f"Table {self._name} already exists.")
         else:
             subprocess.run(['touch', self._table_location])
@@ -34,8 +38,8 @@ class Table(Generic[V]):
         :return:
         """
 
-        if os.path.isdir(self._table_location):
-            os.rmdir(self._table_location)
+        if os.path.isfile(self._table_location):
+            os.remove(self._table_location)
         else:
             raise DbExistsError(f"Table {self._name} doesn't exists.")
 
@@ -64,10 +68,10 @@ class Table(Generic[V]):
             objects = []
             for line in f.readlines():
                 if line.startswith(key):
-                    objects.append(line.removeprefix(f"{key},"))
+                    objects.append(line.removeprefix(f"{key},").removesuffix("\n"))
 
         return self._serializer.decode(objects[-1])
 
     @property
     def _table_location(self) -> str:
-        return f"db/{self._name}"
+        return f"{self._table_path}/{self._name}"

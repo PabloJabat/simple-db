@@ -1,6 +1,8 @@
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from .exceptions import SegmentSizeError
+
 
 class Segment:
     MAX_SIZE = 100
@@ -14,6 +16,9 @@ class Segment:
         return self._size >= Segment.MAX_SIZE
 
     def write(self, data: bytes) -> None:
-        self._size += len(data)
-        with open(self._path, 'wb') as f:
-            f.write(data)
+        if not self.is_full():
+            self._size += len(data)
+            with open(self._path, 'wb') as f:
+                f.write(data)
+        else:
+            raise SegmentSizeError(f"Segment {self.sid} already full")
