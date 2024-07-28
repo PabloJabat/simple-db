@@ -12,14 +12,12 @@ class Table(Generic[V]):
     A class to represent a table in the database.
     """
 
-    print("hellooo")
-
     def __init__(self, name: str, serializer) -> None:
         self._name = name
         self._serializer = serializer
         self._table_path = None
 
-    def init(self) -> None:
+    def init(self, override=False) -> None:
         """
         Initialise the table.
 
@@ -28,7 +26,7 @@ class Table(Generic[V]):
 
         self._table_path = os.environ["SIMPLE_DB_PATH"]
 
-        if os.path.isfile(self._table_location):
+        if os.path.isfile(self._table_location) and not override:
             raise DbExistsError(f"Table {self._name} already exists.")
         else:
             subprocess.run(['touch', self._table_location])
