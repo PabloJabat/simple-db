@@ -14,6 +14,8 @@ class Table(Generic[V]):
     A class to represent a table in the database.
     """
 
+    TOMBSTONE = 'tombstone'
+
     def __init__(
             self,
             name: str,
@@ -42,7 +44,7 @@ class Table(Generic[V]):
         if os.path.isdir(self._table_location) and not override:
             raise DbExistsError(f"Table {self.name} already exists.")
         else:
-            if not override:
+            if not override or not os.path.isdir(self._table_location):
                 os.mkdir(self._table_location)
                 segment = Segment(self._table_location / f"s1.smt")
                 self._segments.append(segment)
@@ -90,7 +92,7 @@ class Table(Generic[V]):
                 self._segments.append(segment)
                 self._segments[-1].write(key, serialized)
 
-    def get(self, key: str) -> V:
+    def get(self, key: str) -> Optional[V]:
         """
         Get a value from the table.
 
@@ -104,8 +106,21 @@ class Table(Generic[V]):
             for segment in reversed(self._segments):
                 value = segment.read(key)
                 if value is not None:
-                    return value
+                    if value != self.TOMBSTONE:
+                        return value
+                    else:
+                        return None
             raise TableException(f"Table {self.name} doesn't contain {key}")
+
+    def remove(self, key: str) -> None:
+        """
+        Remove a value from the table.
+
+        :param key:
+        :return:
+        """
+
+        self._segments[-1].write(key, "tombstone")
 
     @property
     def _table_location(self) -> Path:

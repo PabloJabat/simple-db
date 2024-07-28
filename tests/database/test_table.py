@@ -92,6 +92,10 @@ class TestTable:
 
         assert len(table._segments) == 2
 
+    def test_create_table_override(self):
+        # TODO: Add test that the table can be created if table.init(True) even if there is none to load
+        pass
+
     def test_fail_load_existing_table(self, existing_table_fixture):
         """Test that init fails when trying to create an existing table when override is false."""
 
