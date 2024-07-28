@@ -31,4 +31,4 @@ if __name__ == "__main__":
     people_tbl.set("1", People("pablo"))
 
     print(people_tbl.get("1"))
-    people_tbl.delete()
+    # people_tbl.delete()
