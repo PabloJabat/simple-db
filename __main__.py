@@ -27,8 +27,6 @@ if __name__ == "__main__":
 
     people_tbl = Table[People]("people", people_serializer)
 
-    people_tbl.init()
-
     people_tbl.set("1", People("pablo"))
 
     print(people_tbl.get("1"))

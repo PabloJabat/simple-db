@@ -1,0 +1,2 @@
+class DbExistsError(Exception):
+    pass

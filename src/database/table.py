@@ -1,5 +1,8 @@
+import os
 import subprocess
 from typing import Generic, TypeVar
+
+from .exceptions import DbExistsError
 
 V = TypeVar('V')
 
@@ -19,7 +22,22 @@ class Table(Generic[V]):
 
         :return:
         """
-        subprocess.run(["bin/start_db.sh", self._table_location])
+        if os.path.isfile(self._table_location):
+            raise DbExistsError(f"Table {self._name} already exists.")
+        else:
+            subprocess.run(['touch', self._table_location])
+
+    def delete(self) -> None:
+        """
+        Delete the table.
+
+        :return:
+        """
+
+        if os.path.isdir(self._table_location):
+            os.rmdir(self._table_location)
+        else:
+            raise DbExistsError(f"Table {self._name} doesn't exists.")
 
     def set(self, key: str, value: V) -> None:
         """
@@ -30,7 +48,9 @@ class Table(Generic[V]):
         :return:
         """
         serialized = self._serializer.encode(value)
-        subprocess.run(["bin/set_db.sh", self._table_location, key, serialized])
+        with open(self._table_location, 'a') as f:
+            f.write(f"{key},{serialized}")
+            f.write('\n')
 
     def get(self, key: str) -> V:
         """
@@ -40,8 +60,13 @@ class Table(Generic[V]):
         :return:
         """
 
-        serialized = subprocess.check_output(["bin/get_db.sh", self._table_location, key]).decode()
-        return self._serializer.decode(serialized)
+        with open(self._table_location, 'r') as f:
+            objects = []
+            for line in f.readlines():
+                if line.startswith(key):
+                    objects.append(line.removeprefix(f"{key},"))
+
+        return self._serializer.decode(objects[-1])
 
     @property
     def _table_location(self) -> str:
