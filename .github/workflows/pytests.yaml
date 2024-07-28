@@ -25,4 +25,8 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest tests
+        coverage run --source src -m pytest tests
+
+    - name: Test Coverage
+      run: |
+        coverage report --fail-under=90
