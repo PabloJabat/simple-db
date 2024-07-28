@@ -140,3 +140,24 @@ class TestTable:
         table_fixture.set("key", "value_1")
         table_fixture.set("key", "value_2")
         assert table_fixture.get("key") == "value_2"
+
+    def test_get_nothing_if_table_is_empty(self, table_fixture: Table):
+        """Test setting two objects and getting the latest version"""
+
+        assert table_fixture.get("key_1") is None
+        assert table_fixture.get("key_2") is None
+
+    def test_get_nothing_if_table_is_not_empty(self, table_fixture: Table):
+        """Test setting two objects and getting the latest version"""
+
+        table_fixture.set("key_1", "value_1")
+        table_fixture.set("key_2", "value_2")
+        assert table_fixture.get("key_3") is None
+        assert table_fixture.get("key_4") is None
+
+    def test_delete_object(self, table_fixture: Table):
+        """Test deleting one object and attempting to get it"""
+
+        table_fixture.set("key_1", "value_1")
+        table_fixture.remove("key_1")
+        assert table_fixture.get("key_1") is None

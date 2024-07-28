@@ -46,16 +46,11 @@ class Table(Generic[V]):
         else:
             if not override or not os.path.isdir(self._table_location):
                 os.mkdir(self._table_location)
-                segment = Segment(self._table_location / f"s1.smt")
-                self._segments.append(segment)
             else:
                 # Try to load any pre-existing segments
                 self._segments = sorted(Segment.from_path(self._table_location / Path(file)) for file
                                         in os.listdir(self._table_location))
 
-                if not self._segments:
-                    segment = Segment(self._table_location / f"s1.smt")
-                    self._segments.append(segment)
 
     def delete_table(self) -> None:
         """
@@ -81,16 +76,17 @@ class Table(Generic[V]):
         """
 
         if not self._segments:
-            raise DbCorruption("No segments")
-        else:
-            serialized = self._serializer.encode(value)
-            try:
-                self._segments[-1].write(key, serialized)
-            except SegmentSizeError:
-                next_segment_id = str(len(self._segments) + 1)
-                segment = Segment(self._table_location / f"s{next_segment_id}.smt")
-                self._segments.append(segment)
-                self._segments[-1].write(key, serialized)
+            segment = Segment(self._table_location / f"s1.smt")
+            self._segments.append(segment)
+
+        serialized = self._serializer.encode(value)
+        try:
+            self._segments[-1].write(key, serialized)
+        except SegmentSizeError:
+            next_segment_id = str(len(self._segments) + 1)
+            segment = Segment(self._table_location / f"s{next_segment_id}.smt")
+            self._segments.append(segment)
+            self._segments[-1].write(key, serialized)
 
     def get(self, key: str) -> Optional[V]:
         """
@@ -101,7 +97,7 @@ class Table(Generic[V]):
         """
 
         if not self._segments:
-            raise DbCorruption("No segments in this table")
+            return None
         else:
             for segment in reversed(self._segments):
                 value = segment.read(key)
@@ -110,7 +106,7 @@ class Table(Generic[V]):
                         return value
                     else:
                         return None
-            raise TableException(f"Table {self.name} doesn't contain {key}")
+            return None
 
     def remove(self, key: str) -> None:
         """
