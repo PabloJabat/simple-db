@@ -16,9 +16,10 @@ class Segment:
 
     def write(self, key: str, value: str) -> None:
         if not self.is_full():
-            self._size += len(value)
+            entry = f"{key},{value}"
             with open(self._path, 'ab') as f:
-                f.write(f"{key},{value}".encode())
+                f.write(entry.encode())
+                self._size += len(entry)
                 f.write(b"\n")
         else:
             raise SegmentSizeError(f"Segment {self._path} already full")

@@ -34,6 +34,8 @@ class Table(Generic[V]):
         else:
             if not override:
                 os.mkdir(self._table_location)
+                segment = Segment(self._table_location / f"s1.smt")
+                self._segments.append(segment)
             else:
                 # Try to load any pre-existing segments
                 self._segments = sorted(Segment.from_path(self._table_location / Path(file)) for file

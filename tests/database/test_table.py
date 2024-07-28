@@ -38,6 +38,8 @@ class TestTable:
     def test_set_object(self, table_fixture: Table):
         """Test setting one object and getting it"""
 
+        print(table_fixture._table_location)
+
         table_fixture.set("key", "value")
         assert table_fixture.get("key") == "value"
 
