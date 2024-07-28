@@ -8,8 +8,25 @@ from src.database.segment import Segment
 
 @pytest.fixture
 def segment(tmp_path):
-    yield Segment(tmp_path / "s1.smt")
-    os.remove(tmp_path / "s1.smt")
+    table_name = "test_table"
+    partition_id = 0
+    segment_id = 0
+    os.makedirs(tmp_path / table_name / f"prt{partition_id}")
+    segment = Segment(tmp_path, table_name, partition_id, segment_id)
+    return segment
+
+
+@pytest.fixture
+def full_segment(tmp_path):
+    table_name = "test_table"
+    partition_id = 0
+    segment_id = 0
+    os.makedirs(tmp_path / table_name / f"prt{partition_id}")
+    segment = Segment(tmp_path, table_name, partition_id, segment_id)
+    for _ in range(20):
+        # Write 1 byte for the key, 3 for the value and 1 for the k-v separator
+        segment.write("k", "val")
+    return segment
 
 
 class TestSegment:
@@ -22,3 +39,10 @@ class TestSegment:
 
         with pytest.raises(SegmentSizeError):
             segment.write("k", "val")
+
+    def test_load_segment(self, full_segment: Segment):
+        """Test that loaded segment is correctly loaded"""
+
+        loaded_segment = Segment.from_path(full_segment.path)
+        assert loaded_segment.is_full() == full_segment.is_full()
+        assert loaded_segment.path == full_segment.path
