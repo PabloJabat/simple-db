@@ -16,7 +16,7 @@ class NullSerializer(Serializer[Any]):
 
 
 @pytest.fixture
-def test_table(tmp_path):
+def table_fixture(tmp_path):
     # Set db path
     os.environ["SIMPLE_DB_PATH"] = str(tmp_path)
 
@@ -35,15 +35,15 @@ def test_table(tmp_path):
 
 
 class TestTable:
-    def test_set_object(self, test_table: Table):
+    def test_set_object(self, table_fixture: Table):
         """Test setting one object and getting it"""
 
-        test_table.set("key", "value")
-        assert test_table.get("key") == "value"
+        table_fixture.set("key", "value")
+        assert table_fixture.get("key") == "value"
 
-    def test_get_latest_object_version(self, test_table: Table):
+    def test_get_latest_object_version(self, table_fixture: Table):
         """Test setting two objects and getting the latest version"""
 
-        test_table.set("key", "value_1")
-        test_table.set("key", "value_2")
-        assert test_table.get("key") == "value_2"
+        table_fixture.set("key", "value_1")
+        table_fixture.set("key", "value_2")
+        assert table_fixture.get("key") == "value_2"
