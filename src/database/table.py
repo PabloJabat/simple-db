@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Generic, TypeVar, List, Optional
 
-from .exceptions import DbExistsError, DbCorruption, TableException, SegmentSizeError
+from .exceptions import DbExistsError, SegmentSizeError
 from .segment import Segment
 from ..serializer import Serializer
 
@@ -14,7 +14,8 @@ class Table(Generic[V]):
     A class to represent a table in the database.
     """
 
-    TOMBSTONE = 'tombstone'
+    # If a value is empty for a key, it is a TOMBSTONE
+    TOMBSTONE = ""
 
     def __init__(
             self,
@@ -116,7 +117,7 @@ class Table(Generic[V]):
         :return:
         """
 
-        self._segments[-1].write(key, "tombstone")
+        self._segments[-1].write(key, self.TOMBSTONE)
 
     @property
     def _table_location(self) -> Path:
