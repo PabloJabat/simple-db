@@ -14,11 +14,21 @@ class Table(Generic[V]):
     A class to represent a table in the database.
     """
 
-    def __init__(self, name: str, serializer: Serializer) -> None:
-        self._name = name
+    def __init__(
+            self,
+            name: str,
+            serializer: Serializer,
+            path: Optional[Path] = None,
+    ) -> None:
+        self.name = name
         self._serializer = serializer
-        self._table_path: Optional[Path] = None
+        self._table_path = path
         self._segments: List[Segment] = []
+
+    @staticmethod
+    def from_path(path: Path, serializer: Serializer[V]) -> 'Table[V]':
+        table_name = path.name
+        return Table(table_name, serializer, path)
 
     def init(self, override=False) -> None:
         """
@@ -30,7 +40,7 @@ class Table(Generic[V]):
         self._table_path = Path(os.environ["SIMPLE_DB_PATH"])
 
         if os.path.isdir(self._table_location) and not override:
-            raise DbExistsError(f"Table {self._name} already exists.")
+            raise DbExistsError(f"Table {self.name} already exists.")
         else:
             if not override:
                 os.mkdir(self._table_location)
@@ -41,12 +51,7 @@ class Table(Generic[V]):
                 self._segments = sorted(Segment.from_path(self._table_location / Path(file)) for file
                                         in os.listdir(self._table_location))
 
-                if self._segments:
-                    if self._segments[-1].is_full():
-                        next_segment_id = str(len(self._segments) + 1)
-                        segment = Segment(self._table_location / f"s{next_segment_id}.smt")
-                        self._segments.append(segment)
-                else:
+                if not self._segments:
                     segment = Segment(self._table_location / f"s1.smt")
                     self._segments.append(segment)
 
@@ -62,7 +67,7 @@ class Table(Generic[V]):
                 os.remove(f)
             os.rmdir(self._table_location)
         else:
-            raise DbExistsError(f"Table {self._name} doesn't exists.")
+            raise DbExistsError(f"Table {self.name} doesn't exists.")
 
     def set(self, key: str, value: V) -> None:
         """
@@ -81,7 +86,7 @@ class Table(Generic[V]):
                 self._segments[-1].write(key, serialized)
             except SegmentSizeError:
                 next_segment_id = str(len(self._segments) + 1)
-                segment = Segment(self._table_path / f"s{next_segment_id}.smt")
+                segment = Segment(self._table_location / f"s{next_segment_id}.smt")
                 self._segments.append(segment)
                 self._segments[-1].write(key, serialized)
 
@@ -100,8 +105,8 @@ class Table(Generic[V]):
                 value = segment.read(key)
                 if value is not None:
                     return value
-            raise TableException(f"Table {self._name} doesn't contain {key}")
+            raise TableException(f"Table {self.name} doesn't contain {key}")
 
     @property
     def _table_location(self) -> Path:
-        return self._table_path / self._name
+        return self._table_path / self.name
