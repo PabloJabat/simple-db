@@ -1,8 +1,9 @@
 import os
 import subprocess
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, List
 
 from .exceptions import DbExistsError
+from .segment import Segment
 
 V = TypeVar('V')
 
@@ -16,6 +17,7 @@ class Table(Generic[V]):
         self._name = name
         self._serializer = serializer
         self._table_path = None
+        self._segments: List[Segment] = []
 
     def init(self, override=False) -> None:
         """
