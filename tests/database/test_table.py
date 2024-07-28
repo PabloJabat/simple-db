@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -34,7 +35,7 @@ def table_fixture(tmp_path):
     yield table
 
     # Clean-up the table after the test
-    table.delete()
+    table.delete_table()
 
 
 @pytest.fixture
@@ -56,7 +57,7 @@ def existing_table_fixture(tmp_path):
     yield table.name, tmp_path
 
     # Clean-up the table after the test
-    table.delete()
+    table.delete_table()
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ def existing_table_fixture_2(tmp_path):
     yield table.name, tmp_path
 
     # Clean-up the table after the test
-    table.delete()
+    table.delete_table()
 
 
 class TestTable:
@@ -91,6 +92,16 @@ class TestTable:
         table.init(override=True)
 
         assert len(table._segments) == 2
+
+    def test_create_table_override(self):
+        # TODO: Add test that the table can be created if table.init(True) even if there is none to load
+        pass
+
+    def test_delete_table_fails(self):
+        null_serializer = NullSerializer()
+        table = Table.from_path(Path("table_path") / "table_name", null_serializer)
+        with pytest.raises(DbExistsError):
+            table.delete_table()
 
     def test_fail_load_existing_table(self, existing_table_fixture):
         """Test that init fails when trying to create an existing table when override is false."""
@@ -129,3 +140,24 @@ class TestTable:
         table_fixture.set("key", "value_1")
         table_fixture.set("key", "value_2")
         assert table_fixture.get("key") == "value_2"
+
+    def test_get_nothing_if_table_is_empty(self, table_fixture: Table):
+        """Test setting two objects and getting the latest version"""
+
+        assert table_fixture.get("key_1") is None
+        assert table_fixture.get("key_2") is None
+
+    def test_get_nothing_if_table_is_not_empty(self, table_fixture: Table):
+        """Test setting two objects and getting the latest version"""
+
+        table_fixture.set("key_1", "value_1")
+        table_fixture.set("key_2", "value_2")
+        assert table_fixture.get("key_3") is None
+        assert table_fixture.get("key_4") is None
+
+    def test_delete_object(self, table_fixture: Table):
+        """Test deleting one object and attempting to get it"""
+
+        table_fixture.set("key_1", "value_1")
+        table_fixture.remove("key_1")
+        assert table_fixture.get("key_1") is None

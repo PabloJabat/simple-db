@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Generic, TypeVar, List, Optional
 
-from .exceptions import DbExistsError, DbCorruption, TableException, SegmentSizeError
+from .exceptions import DbExistsError, SegmentSizeError
 from .segment import Segment
 from ..serializer import Serializer
 
@@ -13,6 +13,9 @@ class Table(Generic[V]):
     """
     A class to represent a table in the database.
     """
+
+    # If a value is empty for a key, it is a TOMBSTONE
+    TOMBSTONE = ""
 
     def __init__(
             self,
@@ -42,20 +45,15 @@ class Table(Generic[V]):
         if os.path.isdir(self._table_location) and not override:
             raise DbExistsError(f"Table {self.name} already exists.")
         else:
-            if not override:
+            if not override or not os.path.isdir(self._table_location):
                 os.mkdir(self._table_location)
-                segment = Segment(self._table_location / f"s1.smt")
-                self._segments.append(segment)
             else:
                 # Try to load any pre-existing segments
                 self._segments = sorted(Segment.from_path(self._table_location / Path(file)) for file
                                         in os.listdir(self._table_location))
 
-                if not self._segments:
-                    segment = Segment(self._table_location / f"s1.smt")
-                    self._segments.append(segment)
 
-    def delete(self) -> None:
+    def delete_table(self) -> None:
         """
         Delete the table.
 
@@ -79,18 +77,19 @@ class Table(Generic[V]):
         """
 
         if not self._segments:
-            raise DbCorruption("No segments")
-        else:
-            serialized = self._serializer.encode(value)
-            try:
-                self._segments[-1].write(key, serialized)
-            except SegmentSizeError:
-                next_segment_id = str(len(self._segments) + 1)
-                segment = Segment(self._table_location / f"s{next_segment_id}.smt")
-                self._segments.append(segment)
-                self._segments[-1].write(key, serialized)
+            segment = Segment(self._table_location / f"s1.smt")
+            self._segments.append(segment)
 
-    def get(self, key: str) -> V:
+        serialized = self._serializer.encode(value)
+        try:
+            self._segments[-1].write(key, serialized)
+        except SegmentSizeError:
+            next_segment_id = str(len(self._segments) + 1)
+            segment = Segment(self._table_location / f"s{next_segment_id}.smt")
+            self._segments.append(segment)
+            self._segments[-1].write(key, serialized)
+
+    def get(self, key: str) -> Optional[V]:
         """
         Get a value from the table.
 
@@ -99,13 +98,26 @@ class Table(Generic[V]):
         """
 
         if not self._segments:
-            raise DbCorruption("No segments in this table")
+            return None
         else:
             for segment in reversed(self._segments):
                 value = segment.read(key)
                 if value is not None:
-                    return value
-            raise TableException(f"Table {self.name} doesn't contain {key}")
+                    if value != self.TOMBSTONE:
+                        return value
+                    else:
+                        return None
+            return None
+
+    def remove(self, key: str) -> None:
+        """
+        Remove a value from the table.
+
+        :param key:
+        :return:
+        """
+
+        self._segments[-1].write(key, self.TOMBSTONE)
 
     @property
     def _table_location(self) -> Path:
