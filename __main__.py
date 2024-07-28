@@ -36,4 +36,4 @@ if __name__ == "__main__":
 
     print(people_tbl.get("1"))
 
-    people_tbl.delete()
+    people_tbl.delete_table()

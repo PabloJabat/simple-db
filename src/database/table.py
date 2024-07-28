@@ -57,7 +57,7 @@ class Table(Generic[V]):
                     segment = Segment(self._table_location / f"s1.smt")
                     self._segments.append(segment)
 
-    def delete(self) -> None:
+    def delete_table(self) -> None:
         """
         Delete the table.
 

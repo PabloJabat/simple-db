@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -34,7 +35,7 @@ def table_fixture(tmp_path):
     yield table
 
     # Clean-up the table after the test
-    table.delete()
+    table.delete_table()
 
 
 @pytest.fixture
@@ -56,7 +57,7 @@ def existing_table_fixture(tmp_path):
     yield table.name, tmp_path
 
     # Clean-up the table after the test
-    table.delete()
+    table.delete_table()
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ def existing_table_fixture_2(tmp_path):
     yield table.name, tmp_path
 
     # Clean-up the table after the test
-    table.delete()
+    table.delete_table()
 
 
 class TestTable:
@@ -95,6 +96,12 @@ class TestTable:
     def test_create_table_override(self):
         # TODO: Add test that the table can be created if table.init(True) even if there is none to load
         pass
+
+    def test_delete_table_fails(self):
+        null_serializer = NullSerializer()
+        table = Table.from_path(Path("table_path") / "table_name", null_serializer)
+        with pytest.raises(DbExistsError):
+            table.delete_table()
 
     def test_fail_load_existing_table(self, existing_table_fixture):
         """Test that init fails when trying to create an existing table when override is false."""
