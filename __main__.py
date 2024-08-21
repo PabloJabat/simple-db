@@ -26,7 +26,6 @@ if __name__ == "__main__":
     people_serializer = PeopleSerializer()
 
     people_tbl = Table[People]("people", people_serializer)
-    people_tbl.init(override=True)
 
     people_tbl.set("1", People("pablo"))
 
