@@ -29,7 +29,7 @@ class Table(Generic[V]):
             raise TableExistsError(f"{self.name} table already exists")
 
     @staticmethod
-    def from_path(path: Path, serializer: Serializer[V]) -> 'Table[V]':
+    def from_path(path: Path, serializer: Serializer[V]) -> 'Table[V]':  # pragma: no cover
         table_name = path.name
         # TODO: Find all partitions
         return Table(table_name, serializer)

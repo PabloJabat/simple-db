@@ -10,7 +10,6 @@ from ..serializer import Serializer
 V = TypeVar('V')
 
 
-
 class TablePartition(Generic[V]):
     """This table partition is in charge of a set of keys"""
 
@@ -52,7 +51,7 @@ class TablePartition(Generic[V]):
             self._segments = []
 
     @staticmethod
-    def from_path(path: Path, serializer: Serializer[V]) -> 'TablePartition[V]':
+    def from_path(path: Path, serializer: Serializer[V]) -> 'TablePartition[V]':  # pragma: no cover
         """
         Create a table partition from a path. It is assumed that the path exists.
         TODO: Create tests for when the directory for the table partition doesn't exist

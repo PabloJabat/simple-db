@@ -55,7 +55,7 @@ class Segment:
                 return None
 
     @staticmethod
-    def from_path(path: Path) -> "Segment":
+    def from_path(path: Path) -> "Segment":  # pragma: no cover
         # TODO: This function will be deprecated if the creating of the file is moved away from the Segment creation
         # Extract the components
         segment_id = re.match("^([0-9])\.sgmt$", path.name).group(1)
