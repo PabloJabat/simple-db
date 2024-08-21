@@ -1,12 +1,14 @@
 import os
 from pathlib import Path
-from typing import Generic, TypeVar, List, Optional
+from typing import Generic, TypeVar, Optional
 
-from .exceptions import DbExistsError, DbCorruption, TableException, SegmentSizeError
-from .segment import Segment
+from .exceptions import PartitionExistsError, TableExistsError
+from .table_partition import TablePartition
 from ..serializer import Serializer
 
 V = TypeVar('V')
+
+DEFAULT_PARTITIONS = 10
 
 
 class Table(Generic[V]):
@@ -18,42 +20,19 @@ class Table(Generic[V]):
             self,
             name: str,
             serializer: Serializer,
-            path: Optional[Path] = None,
     ) -> None:
         self.name = name
-        self._serializer = serializer
-        self._table_path = path
-        self._segments: List[Segment] = []
+        self.serializer = serializer
+        try:
+            self.partitions = self._init_partitions()
+        except PartitionExistsError:
+            raise TableExistsError(f"{self.name} table already exists")
 
     @staticmethod
     def from_path(path: Path, serializer: Serializer[V]) -> 'Table[V]':
         table_name = path.name
-        return Table(table_name, serializer, path)
-
-    def init(self, override=False) -> None:
-        """
-        Initialise the table.
-
-        :return:
-        """
-
-        self._table_path = Path(os.environ["SIMPLE_DB_PATH"])
-
-        if os.path.isdir(self._table_location) and not override:
-            raise DbExistsError(f"Table {self.name} already exists.")
-        else:
-            if not override:
-                os.mkdir(self._table_location)
-                segment = Segment(self._table_location / f"s1.smt")
-                self._segments.append(segment)
-            else:
-                # Try to load any pre-existing segments
-                self._segments = sorted(Segment.from_path(self._table_location / Path(file)) for file
-                                        in os.listdir(self._table_location))
-
-                if not self._segments:
-                    segment = Segment(self._table_location / f"s1.smt")
-                    self._segments.append(segment)
+        # TODO: Find all partitions
+        return Table(table_name, serializer)
 
     def delete(self) -> None:
         """
@@ -62,12 +41,10 @@ class Table(Generic[V]):
         :return:
         """
 
-        if os.path.isdir(self._table_location):
-            for f in Path(self._table_location).glob('*.smt'):
-                os.remove(f)
-            os.rmdir(self._table_location)
-        else:
-            raise DbExistsError(f"Table {self.name} doesn't exists.")
+        for partition in self.partitions:
+            partition.delete()
+
+        self.path.rmdir()
 
     def set(self, key: str, value: V) -> None:
         """
@@ -78,19 +55,10 @@ class Table(Generic[V]):
         :return:
         """
 
-        if not self._segments:
-            raise DbCorruption("No segments")
-        else:
-            serialized = self._serializer.encode(value)
-            try:
-                self._segments[-1].write(key, serialized)
-            except SegmentSizeError:
-                next_segment_id = str(len(self._segments) + 1)
-                segment = Segment(self._table_location / f"s{next_segment_id}.smt")
-                self._segments.append(segment)
-                self._segments[-1].write(key, serialized)
+        partition_id = hash(key) % DEFAULT_PARTITIONS
+        self.partitions[partition_id].set(key, value)
 
-    def get(self, key: str) -> V:
+    def get(self, key: str) -> Optional[V]:
         """
         Get a value from the table.
 
@@ -98,15 +66,20 @@ class Table(Generic[V]):
         :return:
         """
 
-        if not self._segments:
-            raise DbCorruption("No segments in this table")
-        else:
-            for segment in reversed(self._segments):
-                value = segment.read(key)
-                if value is not None:
-                    return value
-            raise TableException(f"Table {self.name} doesn't contain {key}")
+        partition_id = hash(key) % DEFAULT_PARTITIONS
+        return self.partitions[partition_id].get(key)
 
     @property
-    def _table_location(self) -> Path:
-        return self._table_path / self.name
+    def path(self) -> Path:
+        return Path(os.environ["SIMPLE_DB_PATH"]) / self.name
+
+    def _init_partitions(self):
+        db_path = Path(self.path.parent)
+        table_name = self.path.name
+        return [
+            TablePartition(db_path, table_name, partition_id, self.serializer)
+            for partition_id in range(DEFAULT_PARTITIONS)
+        ]
+
+    def _partition_path(self, partition_id: int) -> Path:
+        return self.path / f"prt{partition_id}"

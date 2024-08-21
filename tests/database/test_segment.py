@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from src.database.exceptions import SegmentSizeError
+from src.database.exceptions import SegmentSizeError, SegmentExistsError
 from src.database.segment import Segment
 
 
@@ -11,21 +11,9 @@ def segment(tmp_path):
     table_name = "test_table"
     partition_id = 0
     segment_id = 0
+    # TODO: If the creating of the file was separate from the creating of the segment we wouldn't need to do this
     os.makedirs(tmp_path / table_name / f"prt{partition_id}")
     segment = Segment(tmp_path, table_name, partition_id, segment_id)
-    return segment
-
-
-@pytest.fixture
-def full_segment(tmp_path):
-    table_name = "test_table"
-    partition_id = 0
-    segment_id = 0
-    os.makedirs(tmp_path / table_name / f"prt{partition_id}")
-    segment = Segment(tmp_path, table_name, partition_id, segment_id)
-    for _ in range(20):
-        # Write 1 byte for the key, 3 for the value and 1 for the k-v separator
-        segment.write("k", "val")
     return segment
 
 
@@ -40,9 +28,8 @@ class TestSegment:
         with pytest.raises(SegmentSizeError):
             segment.write("k", "val")
 
-    def test_load_segment(self, full_segment: Segment):
-        """Test that loaded segment is correctly loaded"""
+    def test_fail_to_create_segment(self, segment: segment):
+        """Test that the segment raises error after creating if it already exists"""
 
-        loaded_segment = Segment.from_path(full_segment.path)
-        assert loaded_segment.is_full() == full_segment.is_full()
-        assert loaded_segment.path == full_segment.path
+        with pytest.raises(SegmentExistsError):
+            _ = Segment(segment._db_path, segment._table_name, segment._partition_id, segment._segment_id)

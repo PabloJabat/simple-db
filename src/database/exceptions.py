@@ -6,9 +6,21 @@ class DbCorruption(Exception):
     pass
 
 
-class SegmentSizeError(Exception):
+class TableExistsError(Exception):
     pass
 
 
 class TableException(Exception):
+    pass
+
+
+class PartitionExistsError(Exception):
+    pass
+
+
+class SegmentExistsError(Exception):
+    pass
+
+
+class SegmentSizeError(Exception):
     pass
